@@ -37,11 +37,12 @@ public class HotpPin extends DomainBasedHash {
 
     private static final String TAG = HotpPin.class.getSimpleName();
 
-    public HotpPin(Context context) throws IOException {
-        super(context);
-    }
+    
+    public HotpPin(DomainResolver resolver) {
+		super(resolver);
+	}
 
-    @Override
+	@Override
     public String generate(String masterPass, String domain, int length)
             throws PasswordGenerationException {
 

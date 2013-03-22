@@ -20,6 +20,7 @@ package info.staticfree.SuperGenPass;
  */
 
 import info.staticfree.SuperGenPass.hashes.DomainBasedHash;
+import info.staticfree.SuperGenPass.hashes.DomainResolver;
 import info.staticfree.SuperGenPass.hashes.HotpPin;
 import info.staticfree.SuperGenPass.hashes.PasswordComposer;
 import info.staticfree.SuperGenPass.hashes.SuperGenPass;
@@ -72,6 +73,7 @@ import android.widget.FilterQueryProvider;
 import android.widget.SimpleCursorAdapter;
 import android.widget.Spinner;
 import android.widget.TabHost;
+import android.widget.TabHost.OnTabChangeListener;
 import android.widget.TabHost.TabSpec;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
@@ -88,8 +90,6 @@ public class Super_Gen_Pass extends TabActivity implements OnClickListener, OnLo
         OnCheckedChangeListener, OnEditorActionListener, FilterQueryProvider {
     private final static String TAG = Super_Gen_Pass.class.getSimpleName();
 
-    DomainBasedHash mHasher;
-
     // @formatter:off
     private static final int
         DIALOG_ABOUT = 100,
@@ -100,8 +100,6 @@ public class Super_Gen_Pass extends TabActivity implements OnClickListener, OnLo
     private static final String STATE_SHOWING_PASSWORD = "info.staticfree.SuperGenPass.STATE_SHOWING_PASSWORD";
     // @formatter:on
 
-    private int pwLength;
-    private String pwType;
     private String pwSalt;
     private boolean mCopyToClipboard;
     private boolean mRememberDomains;
@@ -146,6 +144,11 @@ public class Super_Gen_Pass extends TabActivity implements OnClickListener, OnLo
 
     private boolean mPleaseDontClearDomain;
 
+	private DomainResolver resolver;
+	
+	private HashingProfile hash;
+	private HashingProfile[] profiles;
+
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -176,7 +179,9 @@ public class Super_Gen_Pass extends TabActivity implements OnClickListener, OnLo
         initGenPassword();
         bindTextWatchers();
 
+        this.resolver = new DomainResolver(this);        
         loadFromPreferences();
+        
 
         // sometimes the domain doesn't have focus when first started. Perhaps because of the tabs?
         mDomainEdit.requestFocus();
@@ -191,7 +196,7 @@ public class Super_Gen_Pass extends TabActivity implements OnClickListener, OnLo
                     // populate the URL and give the password entry focus
                     final Uri uri = Uri.parse(maybeUrl);
 
-                    mDomainEdit.setText(mHasher.getDomain(uri.getHost()));
+                    mDomainEdit.setText(resolver.getDomain(uri.getHost()));
                     mMasterPwEdit.requestFocus();
                     mPleaseDontClearDomain = true;
 
@@ -272,9 +277,24 @@ public class Super_Gen_Pass extends TabActivity implements OnClickListener, OnLo
 
         final TabHost mTabHost = (TabHost) findViewById(android.R.id.tabhost);
 
-        mTabHost.addTab(createTabSpec(mTabHost, R.string.tab_password, R.id.tab_password,
-                "password"));
+        mTabHost.addTab(createTabSpec(mTabHost, R.string.tab_password1, R.id.tab_password,
+                "password1"));
+        mTabHost.addTab(createTabSpec(mTabHost, R.string.tab_password2, R.id.tab_password,
+                "password2"));        
         mTabHost.addTab(createTabSpec(mTabHost, R.string.tab_pin, R.id.tab_pin, "pin"));
+        mTabHost.setOnTabChangedListener(new OnTabChangeListener() {
+			
+			@Override
+			public void onTabChanged(String tabId) {
+				if ("password1".equals(tabId)) {
+					hash = profiles[0];
+					generateIfValid();
+				} else if ("password2".equals(tabId)) {
+					hash = profiles[1];
+					generateIfValid();
+				}
+			}
+		});
     }
 
     private TabSpec createTabSpec(TabHost tabhost, int title, int content, String tag) {
@@ -396,7 +416,7 @@ public class Super_Gen_Pass extends TabActivity implements OnClickListener, OnLo
             domain = extractDomain(domain);
         }
         final String masterPw = getMasterPassword() + pwSalt;
-        final String genPw = mHasher.generate(masterPw, domain, pwLength);
+        final String genPw = hash.generatePassword(masterPw, domain);
 
         mGenPwView.setDomainName(domain);
         mGenPwView.setText(genPw);
@@ -479,7 +499,7 @@ public class Super_Gen_Pass extends TabActivity implements OnClickListener, OnLo
     String extractDomain(String maybeUrl) {
         try {
             final Uri uri = Uri.parse(maybeUrl);
-            return mHasher.getDomain(uri.getHost());
+            return resolver.getDomain(uri.getHost());
         } catch (final NullPointerException e) {
             return maybeUrl;
         } catch (final PasswordGenerationException e) {
@@ -709,8 +729,18 @@ public class Super_Gen_Pass extends TabActivity implements OnClickListener, OnLo
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
         // when adding items here, make sure default values are in sync with the xml file
-        this.pwType = prefs.getString(Preferences.PREF_PW_TYPE, SuperGenPass.TYPE);
-        this.pwLength = Preferences.getStringAsInteger(prefs, Preferences.PREF_PW_LENGTH, 10);
+        profiles = new HashingProfile[2];
+        try {
+        	profiles[0] = HashingProfile.create(prefs.getString(Preferences.PREF_PW_TYPE_1, SuperGenPass.TYPE), Preferences.getStringAsInteger(prefs, Preferences.PREF_PW_LENGTH_1, 10), resolver);
+        	profiles[1] = HashingProfile.create(prefs.getString(Preferences.PREF_PW_TYPE_2, PasswordComposer.TYPE), Preferences.getStringAsInteger(prefs, Preferences.PREF_PW_LENGTH_2, 8), resolver);
+        } catch (final IOException e) {
+            Toast.makeText(this, getString(R.string.err_json_load, e.getLocalizedMessage()),
+                    Toast.LENGTH_LONG).show();
+            Log.d(TAG, getString(R.string.err_json_load), e);
+            finish();
+        }        	
+        	
+        hash = profiles[0];
         this.pwSalt = prefs.getString(Preferences.PREF_PW_SALT, "");
         this.mCopyToClipboard = prefs.getBoolean(Preferences.PREF_CLIPBOARD, true);
         this.mRememberDomains = prefs.getBoolean(Preferences.PREF_REMEMBER_DOMAINS, true);
@@ -723,40 +753,10 @@ public class Super_Gen_Pass extends TabActivity implements OnClickListener, OnLo
         mPinDigitsSpinner.setSelection(mPinDigits - MIN_PIN_LENGTH);
         mShowPin = prefs.getBoolean(Preferences.PREF_SHOW_PIN, true);
 
-        try {
-            if (pwType.equals(SuperGenPass.TYPE)) {
 
-                mHasher = new SuperGenPass(this, SuperGenPass.HASH_ALGORITHM_MD5);
-
-            } else if (pwType.equals(SuperGenPass.TYPE_SHA_512)) {
-
-                mHasher = new SuperGenPass(this, SuperGenPass.HASH_ALGORITHM_SHA512);
-
-            } else if (pwType.equals(PasswordComposer.TYPE)) {
-                mHasher = new PasswordComposer(this);
-
-            } else {
-                mHasher = new SuperGenPass(this, SuperGenPass.HASH_ALGORITHM_MD5);
-                Log.e(TAG, "password type was set to unknown algorithm: " + pwType);
-            }
-
-            mPinGen = new HotpPin(this);
-
-        } catch (final NoSuchAlgorithmException e) {
-            e.printStackTrace();
-            Toast.makeText(getApplicationContext(),
-                    String.format(getString(R.string.err_no_md5), e.getLocalizedMessage()),
-                    Toast.LENGTH_LONG).show();
-            finish();
-
-        } catch (final IOException e) {
-            Toast.makeText(this, getString(R.string.err_json_load, e.getLocalizedMessage()),
-                    Toast.LENGTH_LONG).show();
-            Log.d(TAG, getString(R.string.err_json_load), e);
-            finish();
-        }
-
-        mHasher.setCheckDomain(!noDomainCheck);
+        mPinGen = new HotpPin(resolver);
+     
+        resolver.setCheckDomain(!noDomainCheck);
 
         if (noDomainCheck) {
             mDomainEdit.setHint(R.string.domain_hint_no_checking);

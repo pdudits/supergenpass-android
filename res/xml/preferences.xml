@@ -64,12 +64,12 @@
             <intent android:action="info.staticfree.android.supergenpass.action.GENERATE_SALT" />
         </PreferenceScreen>
     </PreferenceCategory>
-    <PreferenceCategory android:title="@string/advanced_preferences" >
+    <PreferenceCategory android:title="@string/profile_1" >
         <ListPreference
             android:defaultValue="sgp"
             android:entries="@array/pwgen_types_label"
             android:entryValues="@array/pwgen_types"
-            android:key="pw_type"
+            android:key="pw_type1"
             android:summary="@string/pwgen_type_summary"
             android:title="@string/pwgen_type_prompt" />
         <!--
@@ -83,9 +83,32 @@ XXX Due to a bug in Android, this doesn't work:
         <EditTextPreference
             android:defaultValue="10"
             android:dialogMessage="@string/pref_pw_length_description"
-            android:key="pw_length"
+            android:key="pw_length1"
             android:numeric="integer"
             android:title="@string/pref_pw_length" />
     </PreferenceCategory>
+    <PreferenceCategory android:title="@string/profile_2" >
+        <ListPreference
+            android:defaultValue="pwc"
+            android:entries="@array/pwgen_types_label"
+            android:entryValues="@array/pwgen_types"
+            android:key="pw_type2"
+            android:summary="@string/pwgen_type_summary"
+            android:title="@string/pwgen_type_prompt" />
+        <!--
+XXX Due to a bug in Android, this doesn't work:
+        
+        android:dialogMessage="@string/pwgen_type_description"
 
+  See: http://code.google.com/p/android/issues/detail?id=4497
+        -->
+
+        <EditTextPreference
+            android:defaultValue="8"
+            android:dialogMessage="@string/pref_pw_length_description"
+            android:key="pw_length2"
+            android:numeric="integer"
+            android:title="@string/pref_pw_length" />
+    </PreferenceCategory>
+    
 </PreferenceScreen>

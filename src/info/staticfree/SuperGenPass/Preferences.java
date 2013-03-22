@@ -34,8 +34,10 @@ public class Preferences extends PreferenceActivity {
 
     // @formatter:off
     public static final String
-        PREF_PW_TYPE            = "pw_type",
-        PREF_PW_LENGTH          = "pw_length",
+        PREF_PW_TYPE_1          = "pw_type1",
+        PREF_PW_LENGTH_1        = "pw_length1",
+        PREF_PW_TYPE_2          = "pw_type2",
+        PREF_PW_LENGTH_2        = "pw_length2",        
         PREF_PW_SALT            = "pw_salt",
         PREF_CLIPBOARD          = "clipboard",
         PREF_REMEMBER_DOMAINS   = "domain_autocomplete",
@@ -89,7 +91,8 @@ public class Preferences extends PreferenceActivity {
 
         addPreferencesFromResource(R.xml.preferences);
         findPreference(PREF_PW_CLEAR_TIMEOUT).setOnPreferenceChangeListener(integerConformCheck);
-        findPreference(PREF_PW_LENGTH).setOnPreferenceChangeListener(integerConformCheck);
+        findPreference(PREF_PW_LENGTH_1).setOnPreferenceChangeListener(integerConformCheck);
+        findPreference(PREF_PW_LENGTH_2).setOnPreferenceChangeListener(integerConformCheck);
         mCr = getContentResolver();
 
     }

@@ -49,9 +49,9 @@ public class SuperGenPass extends DomainBasedHash {
      * @throws IOException
      *             if there's an issue loading the domain list
      */
-    public SuperGenPass(Context context, String hashAlgorithm) throws NoSuchAlgorithmException,
+    public SuperGenPass(DomainResolver resolver, String hashAlgorithm) throws NoSuchAlgorithmException,
             IOException {
-        super(context);
+        super(resolver);
         mHasher = MessageDigest.getInstance(hashAlgorithm);
     }
 

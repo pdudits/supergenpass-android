@@ -15,13 +15,12 @@ import javax.crypto.spec.PBEKeySpec;
 import android.content.Context;
 
 public class HmacPin extends DomainBasedHash {
+	
+    public HmacPin(DomainResolver resolver) {
+		super(resolver);
+	}
 
-    public HmacPin(Context context) throws IOException {
-        super(context);
-        // TODO Auto-generated constructor stub
-    }
-
-    @Override
+	@Override
     public String generate(String masterPass, String domain, int length)
             throws PasswordGenerationException {
         try {

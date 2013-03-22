@@ -30,9 +30,13 @@ public class PasswordComposer extends DomainBasedHash {
 
     private final MessageDigest md5;
 
-    public PasswordComposer(Context context) throws NoSuchAlgorithmException, IOException {
-        super(context);
-        md5 = MessageDigest.getInstance("MD5");
+    public PasswordComposer(DomainResolver resolver) {
+    	super(resolver);
+        try {
+			md5 = MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException e) {
+			throw new AssertionError("MD5 not supported");
+		}
     }
 
     /**
